@@ -24,6 +24,8 @@ from models import (
     TextBlock,
     Usage,
 )
+from e2e_metadata import Capability, Domain, Mode, Route, Subject, meta
+from litellm.types.utils import LlmProviders
 from quota_client import QuotaClient
 
 pytestmark = [pytest.mark.e2e, pytest.mark.provider_live]
@@ -100,6 +102,16 @@ class TestTpmExcludesCachedTokens:
     @pytest.mark.covers(
         "quota_management.ratelimit.tpm.excludes_cached_tokens",
         exercised_on=["chat_completions"],
+    )
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="anthropic/claude-haiku-4-5-20251001",
+            capabilities=(Capability.PROMPT_CACHING,),
+            mode=Mode.NONSTREAM,
+        )
     )
     def test_cache_hit_reduces_tpm_by_non_cached_only(
         self, client: QuotaClient, resources: ResourceManager

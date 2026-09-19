@@ -13,7 +13,9 @@ import pytest
 from budget_client import BudgetClient, is_budget_block, model_budget
 from e2e_config import unique_marker
 from e2e_http import require_successful_call
+from e2e_metadata import Domain, Mode, Route, Subject, meta
 from lifecycle import ResourceManager
+from litellm.types.utils import LlmProviders
 from models import ModelBudgetEntry
 
 pytestmark = pytest.mark.e2e
@@ -30,6 +32,15 @@ def _call(client: BudgetClient, key: str, model: str):
 
 
 @pytest.mark.covers("quota_management.budget.model_max.isolates_per_model")
+@meta(
+    Subject(
+        domain=Domain.SPEND_BUDGETS,
+        route=Route.CHAT_COMPLETIONS,
+        provider=LlmProviders.ANTHROPIC,
+        model="claude-haiku-4-5",
+        mode=Mode.NONSTREAM,
+    )
+)
 def test_model_max_budget_isolates_per_model(
     client: BudgetClient, resources: ResourceManager
 ) -> None:
@@ -61,6 +72,15 @@ def test_model_max_budget_isolates_per_model(
 
 @pytest.mark.skip(reason="stage red: product gap, end-user model_max_budget rpm_limit is stored but never enforced")
 @pytest.mark.covers("quota_management.budget.end_user_model_max.blocks_over_limit")
+@meta(
+    Subject(
+        domain=Domain.SPEND_BUDGETS,
+        route=Route.CHAT_COMPLETIONS,
+        provider=LlmProviders.GEMINI,
+        model="gemini-2.5-flash",
+        mode=Mode.NONSTREAM,
+    )
+)
 def test_end_user_model_max_budget_enforces_per_model_rpm(
     client: BudgetClient, resources: ResourceManager
 ) -> None:

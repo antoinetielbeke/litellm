@@ -102,6 +102,30 @@ Current limits: Bedrock cannot be mounted (SigV4 signs the Host header, so a rew
 
 The harness is fully typed with no error budget: `make lint-e2e-basedpyright` must report zero basedpyright errors, and CI enforces that on any PR touching `tests/e2e/**/*.py`. When a response field is untyped, model it in `models.py` (just the fields you read) and let pydantic validate it, rather than threading a `dict` or `Any` through the test
 
+## Typed test metadata
+
+Separate from the coverage registry and additive to it: `@meta(Subject(...))` from `e2e_metadata.py` says what a test DRIVES, as closed enums rather than a string id. `@pytest.mark.covers("cell.id")` is untouched and keeps working exactly as before; the two markers coexist on the same test, and `@meta` always goes BELOW `@covers` so `Item.location` still anchors at the first decorator and every `source` deep link stays put
+
+```python
+@pytest.mark.covers("quota_management.budget.key.blocks_over_limit")
+@meta(
+    Subject(
+        domain=Domain.SPEND_BUDGETS,
+        route=Route.CHAT_COMPLETIONS,
+        provider=LlmProviders.ANTHROPIC,
+        model="claude-haiku-4-5",
+        mode=Mode.NONSTREAM,
+    )
+)
+def test_bare_key_blocks_over_its_own_budget(...) -> None: ...
+```
+
+Every field is optional today (the backfill of the rest of the suite is a later PR) and every field is a closed enum, so a typo is a basedpyright error at the call site rather than a property that silently never appears. `capabilities` is a tuple even with one member, and it is deduped and sorted at declaration so the committed run artifacts diff cleanly. `Subject` is serialized with `dataclasses.asdict`, so a new scalar field needs no serializer edit; empty fields emit no `<property>` at all. `LlmProviders` is imported under `TYPE_CHECKING` inside `e2e_metadata`, so the module stays stdlib-only - only a test file that actually names a provider pays for importing litellm
+
+The other half is recorded, not declared. `@step("POST /chat/completions")` goes on HARNESS helpers - client methods, `ResourceManager.key`, poll loops - never on a test, and appends its label to the running test's `user_properties` in call order. The list IS the test's user story, and because the label is recorded BEFORE the wrapped call, a failing test's LAST step is where it died. Consecutive duplicates collapse and the log caps at 50 entries, so a poll loop is one beat of the story rather than fifty. Nothing about steps is hand-written: the call sequence cannot drift from what the test actually did
+
+Both halves ride out as JUnit `<property>` entries (`junit_properties.py`), repeated rather than delimiter-joined, since a free-text label has no separator that can be reserved
+
 ## Coverage registry
 
 The set of tests we want is a registry checked into this repo, one row per behavior; that file is the definition of done and the denominator. Each e2e test declares what it covers with `@pytest.mark.covers("...")`, and a small collector diffs the registry against the tests and ships coverage to the existing Grafana. No Allure, no new dependencies

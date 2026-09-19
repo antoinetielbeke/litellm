@@ -20,6 +20,7 @@ from collections.abc import Iterable
 
 import pytest
 from coverage_registry.management_cases import case_properties
+from e2e_metadata import step_properties, subject_properties
 
 # Hardcoded because the runner image copies tests/e2e/ to /app/e2e, so nothing
 # at runtime names this suite's place in the repo. test_junit_properties.py
@@ -89,13 +90,22 @@ def covers_from_item(item: pytest.Item) -> tuple[str, ...]:
 
 def result_properties(item: pytest.Item) -> tuple[tuple[str, str], ...]:
     """The custom signals a standard reporter cannot derive: the normalized suite
-    package, the comma-joined coverage-registry cell ids this test covers, and the
-    repo-relative `path:line` its source sits at."""
-    return (
+    package, the comma-joined coverage-registry cell ids this test covers, the
+    repo-relative `path:line` its source sits at, and the typed `@meta(Subject(...))`
+    fields.
+
+    The fixed three-tuple prefix is load-bearing and stays byte-identical: Loki,
+    Grafana, the status page and tests/integration/conftest.py all read
+    `package`/`covers`/`source` today. `subject_properties` only ever appends, and
+    appends nothing at all for a test with no `meta` marker -- which is every test
+    in the suite until the backfill lands.
+    """
+    fixed = (
         ("package", package_from_nodeid(item.nodeid)),
         ("covers", ",".join(covers_from_item(item))),
         ("source", source_from_item(item)),
-    ) + case_properties(item.nodeid)
+    )
+    return fixed + case_properties(item.nodeid) + subject_properties(item)
 
 
 def attach_result_properties(item: pytest.Item) -> None:
@@ -105,3 +115,20 @@ def attach_result_properties(item: pytest.Item) -> None:
     if any(name == "package" for name, _ in item.user_properties):
         return
     item.user_properties.extend(result_properties(item))
+
+
+def attach_step_properties(item: pytest.Item) -> None:
+    """Attach the runtime-recorded steps after the call phase.
+
+    Separate from `attach_result_properties` because it cannot share its home:
+    that one runs in `pytest_collection_modifyitems`, before any test body has
+    executed, so the recorder is necessarily empty there.
+
+    Any `step` entries already on the item are dropped first. The suite runs with
+    `--reruns 1`, so a flaky test's second attempt would otherwise append a second
+    copy of the story behind the first, and the report would read as one very long
+    test that did everything twice. Last attempt wins, which is the attempt whose
+    outcome JUnit records.
+    """
+    item.user_properties[:] = [entry for entry in item.user_properties if entry[0] != "step"]
+    item.user_properties.extend(step_properties())

@@ -22,7 +22,9 @@ import pytest
 from budget_client import BudgetClient, is_budget_block, window_reset_at
 from e2e_http import StreamingResponse, require_successful_call
 from e2e_config import CHEAP_OPENAI_MODEL, unique_marker
+from e2e_metadata import Domain, Mode, Route, Subject, meta
 from lifecycle import ResourceManager
+from litellm.types.utils import LlmProviders
 from models import BudgetWindow
 
 pytestmark = pytest.mark.e2e
@@ -57,6 +59,15 @@ def _drive_to_block(client: BudgetClient, key: str) -> StreamingResponse:
 
 
 @pytest.mark.covers("quota_management.budget.key_multi_window.blocks_then_resets")
+@meta(
+    Subject(
+        domain=Domain.SPEND_BUDGETS,
+        route=Route.CHAT_COMPLETIONS,
+        provider=LlmProviders.OPENAI,
+        model="gpt-5.5",
+        mode=Mode.NONSTREAM,
+    )
+)
 def test_short_window_blocks_then_resets(client: BudgetClient, resources: ResourceManager) -> None:
     key = client.generate_key(
         models=[MODEL],
@@ -90,6 +101,15 @@ def test_short_window_blocks_then_resets(client: BudgetClient, resources: Resour
 
 
 @pytest.mark.covers("quota_management.budget.key_multi_window.blocks_then_resets")
+@meta(
+    Subject(
+        domain=Domain.SPEND_BUDGETS,
+        route=Route.CHAT_COMPLETIONS,
+        provider=LlmProviders.OPENAI,
+        model="gpt-5.5",
+        mode=Mode.NONSTREAM,
+    )
+)
 def test_long_window_blocks_after_short_window_resets(client: BudgetClient, resources: ResourceManager) -> None:
     key = client.generate_key(
         models=[MODEL],

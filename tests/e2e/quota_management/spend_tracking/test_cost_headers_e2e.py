@@ -27,7 +27,9 @@ import pytest
 from cost_rows import approx_equal, cacheable_prefix, register_priced_model
 from e2e_config import unique_marker
 from e2e_http import StreamingResponse
+from e2e_metadata import Domain, Mode, Route, Subject, meta
 from lifecycle import ResourceManager
+from litellm.types.utils import LlmProviders
 from models import ChatBody, ChatMessage, ChatResponse, LiteLLMParamsBody
 from spend_e2e_client import SpendClient
 
@@ -60,6 +62,15 @@ def _header_cost(response: StreamingResponse, name: str) -> float:
 
 class TestCostHeaders:
     @pytest.mark.covers("quota_management.spend_tracking.cost_headers.additive_components")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.OPENAI,
+            model="openai/gpt-5.5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_component_cost_headers_sum_to_total(
         self, client: SpendClient, resources: ResourceManager, scoped_key: str
     ) -> None:

@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from e2e_metadata import Domain, Route, Subject, meta
 from models import DateRangeParams
 from spend_e2e_client import SpendClient
 
@@ -105,12 +106,24 @@ def _date_range() -> DateRangeParams:
         for route in SPEND_ROUTES
     ),
 )
+@meta(
+    Subject(
+        domain=Domain.SPEND_BUDGETS,
+        route=Route.SPEND_REPORTING,
+    )
+)
 def test_spend_route_responsive(client: SpendClient, route: str) -> None:
     result = client.probe(route, params=_date_range())
     print(f"{route} -> {result.status_code}\n{result.body[:600]}")
     assert result.healthy, f"{route} -> {result.status_code}\n{result.body[:600]}"
 
 
+@meta(
+    Subject(
+        domain=Domain.SPEND_BUDGETS,
+        route=Route.SPEND_REPORTING,
+    )
+)
 def test_schema_listed_spend_routes_are_responsive(client: SpendClient) -> None:
     """Probe any spend GET route the schema lists that isn't in SPEND_ROUTES."""
     schema = client.openapi()

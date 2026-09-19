@@ -21,7 +21,9 @@ import pytest
 from budget_client import BudgetClient, is_budget_block
 from e2e_config import unique_marker
 from e2e_http import Success, require_successful_call
+from e2e_metadata import Domain, Mode, Route, Subject, meta
 from lifecycle import ResourceManager
+from litellm.types.utils import LlmProviders
 from models import ChatBody, ChatMessage
 
 pytestmark = pytest.mark.e2e
@@ -79,6 +81,15 @@ def _send(client: BudgetClient, key: str) -> str | None:
 
 
 class TestTeamMemberBudget:
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_member_spend_attributed_to_team_and_user(self, client: BudgetClient, member: _Member) -> None:
         sent = frozenset(rid for rid in (_send(client, member.key) for _ in range(BURST)) if rid)
         assert sent, "no member call went through; cannot check attribution"
@@ -98,6 +109,15 @@ class TestTeamMemberBudget:
             )
 
     @pytest.mark.covers("quota_management.budget.team_member.blocks_over_limit")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_member_spend_over_budget_is_blocked(self, client: BudgetClient, member: _Member) -> None:
         for _ in range(40):
             result = client.chat(member.key, MODEL, f"spend {unique_marker()}", max_tokens=16)

@@ -7,7 +7,9 @@ import pytest
 from budget_client import BudgetClient, is_budget_block
 from e2e_config import unique_marker
 from e2e_http import require_successful_call
+from e2e_metadata import Domain, Mode, Route, Subject, meta
 from lifecycle import ResourceManager
+from litellm.types.utils import LlmProviders
 
 pytestmark = pytest.mark.e2e
 
@@ -49,6 +51,15 @@ def _poll_until_serves_again(client: BudgetClient, key: str) -> None:
 
 class TestBudgetResetPerLevel:
     @pytest.mark.covers("quota_management.budget.key.resets_after_window")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_bare_key_budget_resets_after_window(self, client: BudgetClient, resources: ResourceManager) -> None:
         key = client.generate_key(max_budget=TINY_CAP, budget_duration=WINDOW)
         resources.defer(lambda: client.delete_key(key))
@@ -57,6 +68,15 @@ class TestBudgetResetPerLevel:
         _poll_until_serves_again(client, key)
 
     @pytest.mark.covers("quota_management.budget.team.resets_after_window")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_team_budget_resets_after_window(self, client: BudgetClient, resources: ResourceManager) -> None:
         team_id = client.create_team(
             alias=f"e2e-team-reset-{unique_marker()}", max_budget=TINY_CAP, budget_duration=WINDOW
@@ -69,6 +89,15 @@ class TestBudgetResetPerLevel:
         _poll_until_serves_again(client, key)
 
     @pytest.mark.covers("quota_management.budget.organization.resets_after_window")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_org_budget_resets_after_window(self, client: BudgetClient, resources: ResourceManager) -> None:
         org_id = client.create_org(
             max_budget=TINY_CAP, alias=f"e2e-org-reset-{unique_marker()}", budget_duration=WINDOW
@@ -91,6 +120,15 @@ class TestBudgetResetPerLevel:
         _poll_until_serves_again(client, key)
 
     @pytest.mark.covers("quota_management.budget.internal_user.resets_after_window")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_personal_key_user_budget_resets_after_window(
         self, client: BudgetClient, resources: ResourceManager
     ) -> None:
@@ -109,6 +147,15 @@ class TestKeyBudgetResetAcrossKeyKinds:
     the only thing that can block and the only thing that has to reset."""
 
     @pytest.mark.covers("quota_management.budget.key.resets_after_window")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_personal_key_resets_after_window(self, client: BudgetClient, resources: ResourceManager) -> None:
         user_id = client.create_user(max_budget=ROOMY_CAP)
         resources.defer(lambda: client.delete_user(user_id))
@@ -119,6 +166,15 @@ class TestKeyBudgetResetAcrossKeyKinds:
         _poll_until_serves_again(client, key)
 
     @pytest.mark.covers("quota_management.budget.key.resets_after_window")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_team_key_resets_after_window(self, client: BudgetClient, resources: ResourceManager) -> None:
         team_id = client.create_team(alias=f"e2e-key-reset-team-{unique_marker()}", max_budget=ROOMY_CAP)
         resources.defer(lambda: client.delete_team(team_id))
@@ -129,6 +185,15 @@ class TestKeyBudgetResetAcrossKeyKinds:
         _poll_until_serves_again(client, key)
 
     @pytest.mark.covers("quota_management.budget.key.resets_after_window")
+    @meta(
+        Subject(
+            domain=Domain.SPEND_BUDGETS,
+            route=Route.CHAT_COMPLETIONS,
+            provider=LlmProviders.ANTHROPIC,
+            model="claude-haiku-4-5",
+            mode=Mode.NONSTREAM,
+        )
+    )
     def test_team_member_key_resets_after_window(self, client: BudgetClient, resources: ResourceManager) -> None:
         team_id = client.create_team(alias=f"e2e-key-reset-team-{unique_marker()}", max_budget=ROOMY_CAP)
         resources.defer(lambda: client.delete_team(team_id))

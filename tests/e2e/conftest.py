@@ -36,10 +36,11 @@ from e2e_config import (
 )
 from e2e_db import RESET_OPT_IN_ENV, reset_spend_logs, run_spend_log_cleanup
 from e2e_http import unwrap
+from e2e_metadata import STEPS
 from fixture_mode import fixture_mode_collection_error, fixture_report_lines
 from fixture_mode import pytest_fixture_setup as pytest_fixture_setup
 from idp import Identity, Keycloak, keycloak_from_env
-from junit_properties import attach_result_properties
+from junit_properties import attach_result_properties, attach_step_properties
 from lifecycle import ProxyClientProvider, ResourceManager
 from models import TeamNewBody, UserNewBody, UserNewResponse
 from provider_cache_routing import LIVE_PROVIDER_REQUIRED
@@ -100,6 +101,11 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers",
         "covers(cell_id, *, exercised_on=()): coverage-registry cell(s) this test covers",
+    )
+    config.addinivalue_line(
+        "markers",
+        "meta(subject): typed e2e_metadata.Subject describing what this test drives"
+        " (domain/route/provider/model/capabilities/mode); attach it with @meta(Subject(...))",
     )
     config.addinivalue_line(
         "markers",
@@ -234,10 +240,18 @@ def pytest_runtest_makereport(
     item: pytest.Item, call: pytest.CallInfo[None]
 ) -> Generator[None, pytest.TestReport, pytest.TestReport]:
     """Stash the call-phase outcome so teardown can tell a passed test from a
-    failed one without re-deriving it."""
+    failed one without re-deriving it, and attach the runtime-recorded steps.
+
+    The steps cannot ride along with the other properties in
+    `pytest_collection_modifyitems`: that hook runs before any test body has, so
+    the recorder is empty there. They are attached on every call-phase outcome,
+    failures included -- a failing test's last step is where it died, which is the
+    whole reason the field exists.
+    """
     report = yield
     if report.when == "call":
         item.stash[_CALL_PASSED] = report.passed
+        attach_step_properties(item)
     return report
 
 
@@ -272,6 +286,21 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:
         e2e_test_ran=session.stash.get(_E2E_TEST_RAN, False),
         truncate=reset_spend_logs,
     )
+
+
+@pytest.fixture(autouse=True)
+def _record_steps() -> Iterator[None]:  # pyright: ignore[reportUnusedFunction]  # autouse: nothing names it
+    """Empty the step log before each test, so the story a test tells is its own.
+
+    Autouse and unconditional: the recorder is written by @step-decorated harness
+    helpers, which a test reaches through fixtures as readily as through its own
+    body, so setup-phase steps have to be kept too. The log is read after the call
+    phase by `pytest_runtest_makereport`; a test that dies partway keeps the
+    partial list, which is the point -- its last element is where it died.
+    """
+    STEPS.reset()
+    yield
+    STEPS.reset()
 
 
 @pytest.fixture(scope="session")
