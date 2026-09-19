@@ -833,6 +833,15 @@ class CustomDimension(BaseModel):
         )
 
 
+class ContextCompactionConfig(BaseModel):
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    model: str = Field(min_length=1)
+    trigger_ratio: float = Field(default=0.9, gt=0, lt=1)
+    max_tokens: int = Field(default=4096, ge=512)
+    timeout_seconds: float = Field(default=120, gt=0)
+
+
 class ComplexityRouterConfig(BaseModel):
     """Configuration for the ComplexityRouter."""
 
@@ -1302,6 +1311,11 @@ class ComplexityRouterConfig(BaseModel):
             "housekeeping, on top of the built-in conversation-title ones. For clients whose "
             "wording the built-ins don't cover, or after a client release changes its strings."
         ),
+    )
+
+    context_compaction: ContextCompactionConfig | None = Field(
+        default=None,
+        description="Native Anthropic compaction with text-summary replay on the selected deployment. Overrides context-window escalation when configured.",
     )
 
     enable_context_window_escalation: bool = Field(

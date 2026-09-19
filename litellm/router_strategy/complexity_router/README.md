@@ -68,6 +68,44 @@ still resolve to a deployment in `model_list`; this configuration does not creat
             - abc
 ```
 
+### Context compaction
+
+Set `context_compaction` under `complexity_router_config` to fit long histories
+to the deployment already selected by routing. Omitted, it is off. When set,
+it overrides `enable_context_window_escalation`. Only Chat Completions and
+Anthropic Messages requests are supported
+
+```yaml
+complexity_router_config:
+  context_compaction:
+    model: native-compactor
+    max_tokens: 4096
+    trigger_ratio: 0.9
+    timeout_seconds: 120
+```
+
+The three numeric values shown are defaults. `model` must name a configured,
+regular model group, not another auto-router, backed by a native Anthropic model
+with on-demand compaction support, such as `anthropic/claude-sonnet-5`. Its known
+context window must fit the history being summarized plus its output allowance
+
+Anthropic generates the summary using its native compaction operation. The router
+replays that summary as ordinary text to the same selected answering deployment,
+for example `anthropic/claude-haiku-4-5-20251001`. It does not replay the signed
+compaction block to Haiku. Leading system/developer instructions, the Messages
+system prompt, and the latest user turn with its following tool calls/results
+stay unchanged. The history split must preserve complete tool pairs
+
+The input budget is `floor(trigger_ratio * max_input_tokens) - output_reserve`.
+Token counts are estimates; the reserve uses the request's output limit or the
+model's known output limit. The compacted request is checked again before dispatch
+
+Each request gets at most one billable compaction attempt. On the proxy, the caller
+must have access to the compactor and sufficient budget. Compactor retries and
+fallbacks are disabled. Errors, unsafe history, unknown limits, or a summary that
+still does not fit fail closed. There is no chunking, prompt-based summarization,
+or context-window escalation fallback
+
 ### Capability forecasting
 
 Set `classifier_type: capability` to use

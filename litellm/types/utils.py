@@ -2959,6 +2959,7 @@ RoutingDecisionCause = Literal[
 
 InternalCallOrigin = Literal[
     "autorouter_classifier",
+    "autorouter_compaction",
     "shadow_eval_router",
     "shadow_eval_judge",
     "llm_as_a_judge_guardrail",
@@ -3818,6 +3819,7 @@ all_litellm_params = (
     agentic_loop_internal_litellm_params
     + [TRUSTED_CALLBACK_VARS_FIELD, ADDRESSED_RESPONSE_ID_FIELD, *bedrock_batch_litellm_params]
     + [
+        "_context_compaction_state",
         "metadata",
         "litellm_metadata",
         "keepalive_seconds",
