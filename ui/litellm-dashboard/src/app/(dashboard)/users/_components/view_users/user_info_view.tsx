@@ -44,6 +44,8 @@ import { useMCPServers } from "@/app/(dashboard)/hooks/mcpServers/useMCPServers"
 import { useMCPToolsets } from "@/app/(dashboard)/hooks/mcpServers/useMCPToolsets";
 import { extractMcpEntitlement } from "@/components/mcp_server_management/mcpEntitlement";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import ScopedSavingsTab from "@/components/shared/ScopedSavingsTab";
+import { useActivityDateRange } from "@/app/(dashboard)/cost-optimization/_components/useDailyActivityRange";
 
 interface UserInfoViewProps {
   userId: string;
@@ -86,6 +88,7 @@ export default function UserInfoView({
   startInEditMode = false,
 }: UserInfoViewProps) {
   const { premiumUser } = useAuthorized();
+  const savingsDateRange = useActivityDateRange();
   const [userData, setUserData] = useState<UserInfoV2Response | null>(null);
   const [teamDetails, setTeamDetails] = useState<TeamDisplayInfo[]>([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -475,6 +478,9 @@ export default function UserInfoView({
           <TabsTrigger value="details" className="flex-none data-active:text-primary after:bg-primary">
             Details
           </TabsTrigger>
+          <TabsTrigger value="savings" className="flex-none data-active:text-primary after:bg-primary">
+            Savings
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Panel */}
@@ -684,6 +690,21 @@ export default function UserInfoView({
               </div>
             )}
           </Card>
+        </TabsContent>
+        <TabsContent value="savings">
+          {activeTab === "savings" &&
+            (userId.trim() ? (
+              <ScopedSavingsTab
+                key={userId}
+                accessToken={accessToken}
+                scope={{ userId }}
+                activity={savingsDateRange}
+                entityType="user"
+                scopeNote="Savings for this user across API keys and JWT-authenticated requests."
+              />
+            ) : (
+              <p role="alert">Savings are unavailable because this user has no ID.</p>
+            ))}
         </TabsContent>
       </Tabs>
       <OnboardingModal
